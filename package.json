@@ -1,6 +1,6 @@
 {
   "name": "@foundrykit/menu-plugin",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A plugin for Payload CMS that provides a flexible and customisable menu system.",
   "license": "MIT",
   "type": "module",
@@ -8,6 +8,13 @@
     "name": "Isaac SJ",
     "email": "isaac@umidigital.co.uk"
   },
+  "keywords": [
+    "payload",
+    "payloadcms",
+    "plugin",
+    "menu",
+    "navigation"
+  ],
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -121,6 +128,12 @@
       "unrs-resolver"
     ]
   },
-  "registry": "https://registry.npmjs.org/",
-  "dependencies": {}
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/umi-labs/menu-plugin"
+  },
+  "bugs": {
+    "url": "https://github.com/umi-labs/menu-plugin/issues"
+  },
+  "homepage": "https://github.com/umi-labs/menu-plugin#readme"
 }
