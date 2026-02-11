@@ -1,9 +1,9 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { menuPlugin } from 'menu-plugin'
 import { MongoMemoryReplSet } from 'mongodb-memory-server'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { menuPlugin } from 'menu-plugin'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
@@ -37,6 +37,10 @@ const buildConfigWithMemoryDB = async () => {
     },
     collections: [
       {
+        slug: 'pages',
+        fields: [],
+      },
+      {
         slug: 'posts',
         fields: [],
       },
@@ -59,9 +63,8 @@ const buildConfigWithMemoryDB = async () => {
     },
     plugins: [
       menuPlugin({
-        collections: {
-          posts: true,
-        },
+        baseUrl: process.env.PRODUCTION_URL || '',
+        relationTo: ['pages', 'posts'],
       }),
     ],
     secret: process.env.PAYLOAD_SECRET || 'test-secret_key',

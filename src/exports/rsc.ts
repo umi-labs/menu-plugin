@@ -1,1 +1,1 @@
-export { BeforeDashboardServer } from '../components/BeforeDashboardServer.js'
+// Reserved for React Server Components

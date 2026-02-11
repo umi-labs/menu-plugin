@@ -1,0 +1,17 @@
+export const COUNTRY_CODES = [
+  { code: '+1', label: 'US/CA (+1)' },
+  { code: '+44', label: 'UK (+44)' },
+  { code: '+33', label: 'FR (+33)' },
+  { code: '+49', label: 'DE (+49)' },
+  { code: '+61', label: 'AU (+61)' },
+  { code: '+81', label: 'JP (+81)' },
+  { code: '+86', label: 'CN (+86)' },
+  { code: '+91', label: 'IN (+91)' },
+  { code: '+55', label: 'BR (+55)' },
+  { code: '+52', label: 'MX (+52)' },
+  { code: '+39', label: 'IT (+39)' },
+  { code: '+34', label: 'ES (+34)' },
+  { code: '+82', label: 'KR (+82)' },
+  { code: '+31', label: 'NL (+31)' },
+  { code: '+46', label: 'SE (+46)' },
+]

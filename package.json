@@ -1,9 +1,13 @@
 {
   "name": "menu-plugin",
   "version": "1.0.0",
-  "description": "A blank template to get started with Payload 3.0",
+  "description": "A plugin for Payload CMS that provides a flexible and customisable menu system.",
   "license": "MIT",
   "type": "module",
+  "author": {
+    "name": "Isaac SJ",
+    "email": "isaac@umidigital.co.uk"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -33,6 +37,9 @@
     "clean": "rimraf {dist,*.tsbuildinfo}",
     "copyfiles": "copyfiles -u 1 \"src/**/*.{html,css,scss,ttf,woff,woff2,eot,svg,jpg,png,json}\" dist/",
     "dev": "next dev dev --turbo",
+    "dev:db:up": "docker-compose -f dev/docker-compose.yml up -d",
+    "dev:db:down": "docker-compose -f dev/docker-compose.yml down",
+    "dev:with-db": "docker-compose -f dev/docker-compose.yml up -d && pnpm dev && docker-compose -f dev/docker-compose.yml down",
     "dev:generate-importmap": "pnpm dev:payload generate:importmap",
     "dev:generate-types": "pnpm dev:payload generate:types",
     "dev:payload": "cross-env PAYLOAD_CONFIG_PATH=./dev/payload.config.ts payload",
