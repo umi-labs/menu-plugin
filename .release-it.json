@@ -3,7 +3,8 @@
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
     "push": true,
-    "requireCleanWorkingDir": true
+    "requireCleanWorkingDir": true,
+    "pushRepo": "https://github.com/umi-labs/menu-plugin"
   },
   "npm": {
     "publish": true
