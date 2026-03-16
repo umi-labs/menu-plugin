@@ -1,15 +1,30 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-// this is an example Playwright e2e test
-test('should render admin panel logo', async ({ page }) => {
+const login = async (page: Page) => {
   await page.goto('/admin')
-
-  // login
   await page.fill('#field-email', 'dev@payloadcms.com')
   await page.fill('#field-password', 'test')
   await page.click('.form-submit button')
-
-  // should show dashboard
   await expect(page).toHaveTitle(/Dashboard/)
-  await expect(page.locator('.graphic-icon')).toBeVisible()
+}
+
+test('shows the menu plugin collection create screen', async ({ page }) => {
+  await login(page)
+
+  await page.goto('/admin/collections/menus/create')
+
+  await expect(page.getByLabel('Title')).toBeVisible()
+  await expect(page.getByLabel('Slug')).toBeVisible()
+  await expect(page.getByText('Menu Structure')).toBeVisible()
+  await expect(page.getByText('Add items to see a preview.')).toBeVisible()
+})
+
+test('renders menu metadata fields on the create screen', async ({ page }) => {
+  await login(page)
+
+  await page.goto('/admin/collections/menus/create')
+
+  await expect(page.getByLabel('Description')).toBeVisible()
+  await expect(page.getByLabel('Locale')).toBeVisible()
 })

@@ -2,6 +2,7 @@ import type { CollectionSlug, Field, Validate } from 'payload'
 
 export type MenuItemFieldOptions = {
   baseUrl?: string
+  disabled?: boolean
   maxDepth?: number
   relationTo?: CollectionSlug | CollectionSlug[]
 }
@@ -141,9 +142,13 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
           name: 'url',
           type: 'text',
           admin: {
-            components: {
-              Field: 'menu-plugin/client#UrlField',
-            },
+            ...(options?.disabled
+              ? {}
+              : {
+                  components: {
+                    Field: 'menu-plugin/client#UrlField',
+                  },
+                }),
             condition: (_data, siblingData) => {
               return siblingData?.type !== 'reference'
             },
@@ -198,15 +203,11 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
 
   const isLink = (_data: any, siblingData: any) => siblingData?.itemType !== 'dropdown'
 
-  // Wrap link-specific fields so they hide when itemType is 'dropdown'.
-  // Label is kept visible for both types (it sits in the url row but url hides for dropdown).
   const linkFields: Field[] = basicFields.map((f) => {
-    // For row fields, add condition to each child field (except label, which is always visible)
     if ('type' in f && f.type === 'row') {
       return {
         ...f,
         fields: f.fields.map((child) => {
-          // Label is always visible for both link and dropdown
           if ('name' in child && child.name === 'label') return child
           return {
             ...child,
@@ -224,7 +225,6 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
       } as Field
     }
 
-    // For named fields, add condition directly
     if ('admin' in f || 'name' in f) {
       return {
         ...f,
@@ -262,9 +262,13 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
           name: 'children',
           type: 'array',
           admin: {
-            components: {
-              RowLabel: 'menu-plugin/client#SubMenuItemRowLabel',
-            },
+            ...(options?.disabled
+              ? {}
+              : {
+                  components: {
+                    RowLabel: 'menu-plugin/client#SubMenuItemRowLabel',
+                  },
+                }),
             condition: (_data, siblingData) => {
               return siblingData?.itemType === 'dropdown'
             },

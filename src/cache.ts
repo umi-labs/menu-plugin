@@ -11,16 +11,20 @@ export class MenuCache {
     this.ttl = ttlMs
   }
 
-  private buildKey(slug: string, locale?: string): string {
-    return locale ? `${slug}:${locale}` : slug
+  configure(ttlMs: number): void {
+    this.ttl = ttlMs
+  }
+
+  private buildKey(slug: string, depth = 0, locale?: string): string {
+    return `${slug}::${locale || '__default'}::${depth}`
   }
 
   clear(): void {
     this.cache.clear()
   }
 
-  get(slug: string, locale?: string): any | undefined {
-    const key = this.buildKey(slug, locale)
+  get(slug: string, depth = 0, locale?: string): any | undefined {
+    const key = this.buildKey(slug, depth, locale)
     const entry = this.cache.get(key)
     if (!entry) return undefined
     if (Date.now() > entry.expiresAt) {
@@ -30,21 +34,16 @@ export class MenuCache {
     return entry.data
   }
 
-  invalidate(slug: string, locale?: string): void {
-    if (locale) {
-      this.cache.delete(this.buildKey(slug, locale))
-    } else {
-      // Invalidate all locales for this slug
-      for (const key of this.cache.keys()) {
-        if (key === slug || key.startsWith(`${slug}:`)) {
-          this.cache.delete(key)
-        }
+  invalidate(slug: string): void {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(`${slug}::`)) {
+        this.cache.delete(key)
       }
     }
   }
 
-  set(slug: string, data: any, locale?: string): void {
-    const key = this.buildKey(slug, locale)
+  set(slug: string, data: any, depth = 0, locale?: string): void {
+    const key = this.buildKey(slug, depth, locale)
     this.cache.set(key, {
       data,
       expiresAt: Date.now() + this.ttl,

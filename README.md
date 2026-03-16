@@ -1,40 +1,32 @@
 # @foundrykit/menu-plugin
 
-A [Payload CMS](https://payloadcms.com) v3 plugin that adds a flexible, configurable menu management system to your admin panel. Build navigation menus with support for internal links, external URLs, document references, dropdowns, phone numbers, email links, and more.
+A [Payload CMS](https://payloadcms.com) v3 plugin that adds a configurable menu management system to the admin panel. It lets you model nested navigation, fetch menus by slug, and consume them from regular frontend code without depending on Payload admin UI context.
 
 ## Features
 
-- Multiple link types: internal, external, reference, anchor, mailto, tel, custom
-- Nested dropdown menus with configurable max depth
-- Smart URL input that adapts its UI per link type (baseUrl prefix, country code selector, etc.)
-- REST API endpoint to fetch menus by slug
-- Built-in server-side caching with automatic invalidation
-- `useMenu` React hook for client-side fetching
-- Menu export/import endpoints for migration between environments
+- Multiple item types: internal, external, reference, anchor, mailto, tel, custom
+- Nested dropdown menus with configurable depth
+- Admin URL field UI for internal paths, phone numbers, anchors, and email links
+- Public `GET /api/menus/:slug` endpoint with locale and depth support
+- Optional import/export endpoints with admin-only access by default
+- Server-side menu caching with automatic invalidation
+- Frontend-safe `fetchMenu` helper plus a `useMenu` hook built on top of it
 - Per-item visibility, target, rel, roles, and custom attributes
-- Sidebar preview of the menu tree structure
-- Field-level validation per link type
+- Localized menu identity using `slug + locale`
 
 ## Installation
 
 ```bash
 pnpm add @foundrykit/menu-plugin
-# or
-npm install @foundrykit/menu-plugin
-# or
-yarn add @foundrykit/menu-plugin
 ```
 
 ## Quick Start
-
-Add the plugin to your Payload config:
 
 ```ts
 import { buildConfig } from 'payload'
 import { menuPlugin } from '@foundrykit/menu-plugin'
 
 export default buildConfig({
-  // ...your config
   plugins: [
     menuPlugin({
       baseUrl: 'https://example.com',
@@ -44,91 +36,79 @@ export default buildConfig({
 })
 ```
 
-This adds a `menus` collection to your admin panel where you can create and manage navigation menus.
+This registers a `menus` collection in Payload.
 
 ## Configuration
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `baseUrl` | `string` | `''` | Base URL shown as a prefix for internal links |
-| `relationTo` | `string \| string[]` | `'pages'` | Collection(s) available for reference-type links |
-| `maxDepth` | `number` | `2` | Maximum nesting depth for dropdown menus |
-| `disabled` | `boolean` | `false` | Disable the plugin's endpoints and runtime behaviour while keeping the collection in the database schema |
+| `baseUrl` | `string` | `''` | Base URL prefix shown for internal links in the admin |
+| `cacheTTL` | `number` | `60000` | Server cache TTL in milliseconds |
+| `disabled` | `boolean` | `false` | Keep the collection schema, but disable plugin runtime endpoints, hooks, and admin helper UI |
+| `enableImportExport` | `boolean` | `true` | Register the import/export endpoints |
+| `maxDepth` | `number` | `2` | Maximum nesting depth for dropdown items |
+| `relationTo` | `string \| string[]` | `'pages'` | Collection(s) available for reference links |
+| `requireAdminForImportExport` | `boolean` | `true` | Require an authenticated admin user for import/export endpoints |
 
-### Example
+Example:
 
 ```ts
 menuPlugin({
   baseUrl: 'https://mysite.com',
-  relationTo: ['pages', 'posts', 'products'],
+  cacheTTL: 300_000,
   maxDepth: 3,
+  relationTo: ['pages', 'posts', 'products'],
 })
 ```
 
-## Menu Item Types
+## Menu Identity and Locales
 
-Each menu item has a `type` that determines the URL input behaviour:
+Menus are uniquely identified by `slug + locale`.
 
-| Type | Description | Stored value |
-|---|---|---|
-| `reference` | Relationship to a Payload document | Relationship field (no URL) |
-| `internal` | Internal path with baseUrl prefix | Full URL (e.g. `https://example.com/about`) |
-| `external` | External URL | Full URL (e.g. `https://other-site.com`) |
-| `anchor` | Anchor link on the current page | `#section-name` |
-| `mailto` | Email link | `mailto:user@example.com` |
-| `tel` | Phone link with country code selector | `tel:+441234567890` |
-| `custom` | Plain text, any value | As entered |
-
-## Dropdown Menus
-
-Menu items can be either a **link** or a **dropdown**. Dropdowns contain a nested array of child items, which can themselves be links or dropdowns (up to `maxDepth` levels).
-
-## Advanced Options
-
-Each menu item has an "Advanced" toggle that reveals additional fields:
-
-- **Target** — Open in same tab (`_self`) or new tab (`_blank`)
-- **Visibility** — Show or hide the item
-- **Rel** — Custom `rel` attribute (e.g. `noopener noreferrer`)
-- **Roles** — Array of role strings for role-based visibility
-- **Attrs** — Custom HTML attributes as text
+- `slug: "main-menu", locale: "en"` and `slug: "main-menu", locale: "fr"` can coexist
+- locale values are normalized to lowercase
+- a menu with no locale is treated as a separate default variant
 
 ## REST API
 
 ### Get a menu by slug
 
-```
+```http
 GET /api/menus/:slug
 ```
 
 Query parameters:
-- `locale` — Filter by locale field
-- `depth` — Payload relationship depth (default: `0`)
 
-Response: The full menu document as JSON.
+- `locale`: optional locale variant
+- `depth`: Payload relationship depth, default `0`
+
+Example:
 
 ```bash
-curl https://example.com/api/menus/main-menu?depth=1&locale=en
+curl 'https://example.com/api/menus/main-menu?locale=en&depth=1'
 ```
 
-### Export all menus
+### Export menus
 
-```
+```http
 GET /api/menus-export
 ```
 
-Returns all menus as a JSON file download.
+By default this requires an authenticated admin user.
 
 ### Import menus
 
-```
+```http
 POST /api/menus-import
 Content-Type: application/json
 ```
 
-Accepts a JSON array of menu documents (or `{ menus: [...] }`). Upserts by slug — existing menus are updated, new ones are created.
+Accepts either a JSON array of menu documents or `{ "menus": [...] }`.
 
-Response:
+Imports upsert by `slug + locale`.
+
+Example response:
+
 ```json
 {
   "created": 1,
@@ -137,11 +117,24 @@ Response:
 }
 ```
 
-## Client-Side Usage
+## Frontend Usage
 
-### `useMenu` Hook
+### `fetchMenu`
 
-A React hook for fetching menus on the client:
+Use `fetchMenu` anywhere you have a fetch implementation, including server components and non-Payload frontend code.
+
+```ts
+import { fetchMenu } from '@foundrykit/menu-plugin/rsc'
+
+const menu = await fetchMenu({
+  slug: 'main-menu',
+  locale: 'en',
+  depth: 1,
+  baseURL: 'https://example.com',
+})
+```
+
+### `useMenu`
 
 ```tsx
 'use client'
@@ -149,66 +142,29 @@ A React hook for fetching menus on the client:
 import { useMenu } from '@foundrykit/menu-plugin/client'
 
 export function Navigation() {
-  const { menu, isLoading, error, refetch } = useMenu({
+  const { error, isLoading, menu } = useMenu({
     slug: 'main-menu',
     locale: 'en',
     depth: 1,
+    baseURL: 'https://example.com',
   })
 
   if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  if (error) return <div>{error}</div>
   if (!menu) return null
 
-  return (
-    <nav>
-      {menu.items?.map((item: any) => (
-        <a key={item.id} href={item.url} target={item.target}>
-          {item.label}
-        </a>
-      ))}
-    </nav>
-  )
+  return <pre>{JSON.stringify(menu, null, 2)}</pre>
 }
 ```
 
-The hook includes a 30-second client-side cache and supports abort on unmount.
-
-### Options
-
-| Option | Type | Required | Description |
-|---|---|---|---|
-| `slug` | `string` | Yes | The menu slug to fetch |
-| `locale` | `string` | No | Locale filter |
-| `depth` | `number` | No | Relationship population depth (default: `0`) |
-
-### Return Value
-
-| Property | Type | Description |
-|---|---|---|
-| `menu` | `object \| null` | The fetched menu document |
-| `isLoading` | `boolean` | Whether the request is in progress |
-| `error` | `string \| null` | Error message if the request failed |
-| `refetch` | `() => Promise<void>` | Manually re-fetch the menu |
-
-## Server-Side Usage
-
-You can also query menus using the Payload Local API:
-
-```ts
-const menu = await payload.find({
-  collection: 'menus',
-  where: { slug: { equals: 'main-menu' } },
-  depth: 1,
-})
-```
+`useMenu` includes a 30 second client-side cache and aborts in-flight requests on unmount.
 
 ## Caching
 
-The plugin includes automatic server-side caching:
-
-- Menus are cached after the first API request
-- Cache is automatically invalidated when a menu is created, updated, or deleted
-- Default TTL is 5 minutes
+- Menus are cached after the first GET request
+- cache keys include `slug`, `locale`, and `depth`
+- cache entries are invalidated on create, update, and delete
+- default server TTL is 60 seconds and is configurable via `cacheTTL`
 
 ## Requirements
 

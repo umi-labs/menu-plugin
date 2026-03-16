@@ -1,1 +1,1 @@
-// Reserved for React Server Components
+export { fetchMenu } from '../fetchMenu.js'
