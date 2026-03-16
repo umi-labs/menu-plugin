@@ -33,8 +33,6 @@ export const createGetMenuHandler = ({ cache = menuCache }: GetMenuHandlerOption
 
     if (locale) {
       where.locale = { equals: locale }
-    } else {
-      where.or = [{ locale: { exists: false } }, { locale: { equals: '' } }, { locale: { equals: null } }]
     }
 
     const result = await payload.find({
