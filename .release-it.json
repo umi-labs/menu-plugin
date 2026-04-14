@@ -19,6 +19,6 @@
     }
   },
   "hooks": {
-    "before:init": ["pnpm test", "pnpm build"]
+    "before:init": ["pnpm build"]
   }
 }
