@@ -146,7 +146,7 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
               ? {}
               : {
                   components: {
-                    Field: 'menu-plugin/client#UrlField',
+                    Field: '@foundrykit/menu-plugin/client#UrlField',
                   },
                 }),
             condition: (_data, siblingData) => {
@@ -266,7 +266,7 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
               ? {}
               : {
                   components: {
-                    RowLabel: 'menu-plugin/client#SubMenuItemRowLabel',
+                    RowLabel: '@foundrykit/menu-plugin/client#SubMenuItemRowLabel',
                   },
                 }),
             condition: (_data, siblingData) => {
