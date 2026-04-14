@@ -60,7 +60,7 @@ export const createMenusCollection = (options?: MenusCollectionOptions): Collect
             type: 'ui',
             admin: {
               components: {
-                Field: 'menu-plugin/client#MenuPreview',
+                Field: '@foundrykit/menu-plugin/client#MenuPreview',
               },
               position: 'sidebar',
             },
@@ -83,7 +83,7 @@ export const createMenusCollection = (options?: MenusCollectionOptions): Collect
           ? {}
           : {
               components: {
-                RowLabel: 'menu-plugin/client#MenuItemRowLabel',
+                RowLabel: '@foundrykit/menu-plugin/client#MenuItemRowLabel',
               },
             }),
       },
