@@ -44,7 +44,8 @@ const TreeItem: React.FC<{ depth?: number; item: MenuItem }> = ({ depth = 0, ite
         )}
       </div>
       {isDropdown &&
-        item.children?.map((child, i) => <TreeItem depth={depth + 1} item={child} key={i} />)}
+        Array.isArray(item.children) &&
+        item.children.map((child, i) => <TreeItem depth={depth + 1} item={child} key={i} />)}
     </div>
   )
 }
