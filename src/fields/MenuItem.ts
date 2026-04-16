@@ -139,6 +139,7 @@ const buildMegaColumnsField = (options?: MenuItemFieldOptions): Field => {
   return {
     name: 'megaColumns',
     type: 'array',
+    dbName: 'mcols',
     label: 'Mega Menu Columns',
     admin: {
       condition: (_data, siblingData) => siblingData?.itemType === 'mega',
@@ -160,6 +161,7 @@ const buildMegaColumnsField = (options?: MenuItemFieldOptions): Field => {
       {
         name: 'columnLinks',
         type: 'array',
+        dbName: 'clinks',
         label: 'Column Links',
         admin: {
           ...(options?.disabled
@@ -176,6 +178,7 @@ const buildMegaColumnsField = (options?: MenuItemFieldOptions): Field => {
           {
             name: 'subLinks',
             type: 'array',
+            dbName: 'slinks',
             label: 'Sub Links',
             admin: {
               description: 'Items revealed in the secondary panel when this link is hovered or selected.',
