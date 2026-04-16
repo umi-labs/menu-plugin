@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/umi-labs/menu-plugin/compare/v0.2.1...v0.2.2) (2026-04-16)
+
+
+### Bug Fixes
+
+* **MenuPreview:** ensure children are an array before mapping ([dc60faa](https://github.com/umi-labs/menu-plugin/commit/dc60faa1a9a7d38d24569639d9c03067fd282785))
+
 ## [0.2.1](https://github.com/umi-labs/menu-plugin/compare/v0.2.0...v0.2.1) (2026-04-16)
 
 
