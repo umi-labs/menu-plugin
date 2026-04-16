@@ -1,3 +1,5 @@
+export { ColumnLinkRowLabel } from '../components/ColumnLinkRowLabel.js'
+export { MegaColumnRowLabel } from '../components/MegaColumnRowLabel.js'
 export { MenuItemRowLabel } from '../components/MenuItemRowLabel.js'
 export { MenuPreview } from '../components/MenuPreview.js'
 export { SubMenuItemRowLabel } from '../components/SubMenuItemRowLabel.js'

@@ -12,6 +12,7 @@ export type MenuPluginConfig = {
   disabled?: boolean
   enableImportExport?: boolean
   maxDepth?: number
+  mediaCollection?: CollectionSlug
   relationTo?: CollectionSlug | CollectionSlug[]
   requireAdminForImportExport?: boolean
 }
@@ -31,6 +32,7 @@ export const menuPlugin =
         baseUrl: pluginOptions.baseUrl,
         disabled: pluginOptions.disabled,
         maxDepth: pluginOptions.maxDepth,
+        mediaCollection: pluginOptions.mediaCollection,
         relationTo: pluginOptions.relationTo,
       }),
     ]
