@@ -60,7 +60,7 @@ const validateUrl: Validate = (value, { siblingData }) => {
 
 export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDepth = 0): Field[] => {
   const baseUrl = options?.baseUrl ?? ''
-  const maxDepth = options?.maxDepth ?? 2
+  const maxDepth = options?.maxDepth ?? 1
   const relationTo = options?.relationTo ?? ('pages' as CollectionSlug)
   const basicFields: Field[] = [
     {
