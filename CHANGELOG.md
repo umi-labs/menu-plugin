@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.4.0](https://github.com/umi-labs/menu-plugin/compare/v0.3.0...v0.4.0) (2026-04-16)
+
+
+### Features
+
+* Add dbName properties to mega menu fields ([e311a9e](https://github.com/umi-labs/menu-plugin/commit/e311a9e5c02675fa27b7ddbf24fb63eb8d8f47f5))
+
 # [0.3.0](https://github.com/umi-labs/menu-plugin/compare/v0.2.2...v0.3.0) (2026-04-16)
 
 
