@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.3.0](https://github.com/umi-labs/menu-plugin/compare/v0.2.2...v0.3.0) (2026-04-16)
+
+
+### Features
+
+* add mega menu support with columns and featured panels ([88af50a](https://github.com/umi-labs/menu-plugin/commit/88af50afce5ecd9c0ef32aa78d912698fa0e63d6))
+
 ## [0.2.2](https://github.com/umi-labs/menu-plugin/compare/v0.2.1...v0.2.2) (2026-04-16)
 
 
