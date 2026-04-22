@@ -418,6 +418,7 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
         {
           name: 'children',
           type: 'array',
+          ...(currentDepth > 0 ? { dbName: `ch${currentDepth + 1}` } : {}),
           admin: {
             ...(options?.disabled
               ? {}
