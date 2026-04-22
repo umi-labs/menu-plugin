@@ -1,6 +1,6 @@
 {
   "name": "@foundrykit/menu-plugin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A plugin for Payload CMS that provides a flexible and customisable menu system.",
   "license": "MIT",
   "type": "module",
