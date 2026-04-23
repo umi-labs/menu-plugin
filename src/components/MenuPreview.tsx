@@ -10,6 +10,7 @@ type MegaColumn = {
 }
 
 type MenuItem = {
+  [key: string]: unknown
   children?: MenuItem[]
   displaySurface?: string
   itemType?: string
@@ -17,6 +18,15 @@ type MenuItem = {
   megaColumns?: MegaColumn[]
   type?: string
   url?: string
+}
+
+const getNestedChildren = (item: MenuItem): MenuItem[] | null => {
+  if (Array.isArray(item.children)) return item.children as MenuItem[]
+  for (let d = 2; d <= 10; d++) {
+    const val = item[`children_${d}`]
+    if (Array.isArray(val)) return val as MenuItem[]
+  }
+  return null
 }
 
 const TreeItem: React.FC<{ depth?: number; item: MenuItem }> = ({ depth = 0, item }) => {
@@ -67,8 +77,7 @@ const TreeItem: React.FC<{ depth?: number; item: MenuItem }> = ({ depth = 0, ite
         )}
       </div>
       {isDropdown &&
-        Array.isArray(item.children) &&
-        item.children.map((child, i) => <TreeItem depth={depth + 1} item={child} key={i} />)}
+        getNestedChildren(item)?.map((child, i) => <TreeItem depth={depth + 1} item={child} key={i} />)}
       {isMega &&
         Array.isArray(item.megaColumns) &&
         item.megaColumns.map((col, i) => (

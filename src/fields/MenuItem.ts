@@ -416,9 +416,9 @@ export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDept
         },
         ...linkFields,
         {
-          name: 'children',
+          name: currentDepth === 0 ? 'children' : `children_${currentDepth + 1}`,
           type: 'array',
-          ...(currentDepth > 0 ? { dbName: `ch${currentDepth + 1}` } : {}),
+          label: 'Children',
           admin: {
             ...(options?.disabled
               ? {}
