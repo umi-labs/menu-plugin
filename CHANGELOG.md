@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/umi-labs/menu-plugin/compare/v0.4.1...v0.4.2) (2026-04-23)
+
+
+### Bug Fixes
+
+* issue with getArrayRelationName only using dbName and causing an ([377c866](https://github.com/umi-labs/menu-plugin/commit/377c866363d52aa17f10fa7785783741408ea555))
+
 ## [0.4.1](https://github.com/umi-labs/menu-plugin/compare/v0.4.0...v0.4.1) (2026-04-22)
 
 # [0.4.0](https://github.com/umi-labs/menu-plugin/compare/v0.3.0...v0.4.0) (2026-04-16)
