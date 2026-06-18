@@ -4,13 +4,21 @@ import config from '@payload-config'
 import { createPayloadRequest, getPayload } from 'payload'
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 
+import type { DynamicSource } from '../src/types.js'
+
 import { MenuCache } from '../src/cache.js'
 import { createMenusCollection } from '../src/collections/Menus.js'
 import { createExportMenusHandler } from '../src/endpoints/exportMenusHandler.js'
 import { createGetMenuHandler, getMenuHandler } from '../src/endpoints/getMenuHandler.js'
 import { createImportMenusHandler } from '../src/endpoints/importMenusHandler.js'
+import { createMenuItemFields } from '../src/fields/MenuItem.js'
 import { buildMenuRequestURL, fetchMenu } from '../src/fetchMenu.js'
+import { createResolveDynamicMenuHook } from '../src/hooks/resolveDynamicMenu.js'
 import { menuPlugin } from '../src/index.js'
+import {
+  menuDocNeedsMegaColumnsMigration,
+  migrateMenuItemsMegaColumns,
+} from '../src/migrations/megaColumnsToEntries.js'
 
 let payload: Payload
 let adminUser: PayloadRequest['user']
@@ -499,5 +507,430 @@ describe('Frontend fetch helpers', () => {
     await expect(fetchMenu({ fetch: fetchImpl, slug: 'missing-menu' })).rejects.toThrow('Missing menu')
     expect(fetchImpl).toHaveBeenNthCalledWith(1, '/api/menus/main-menu')
     expect(fetchImpl).toHaveBeenNthCalledWith(2, '/api/menus/missing-menu')
+  })
+})
+
+const findByName = (fields: any[], name: string): any =>
+  fields.find((field) => 'name' in field && field.name === name)
+
+const findCollapsible = (fields: any[], label: string): any =>
+  fields.find((field) => field.type === 'collapsible' && field.label === label)
+
+const collectNames = (fields: any[]): string[] =>
+  fields.flatMap((field) => {
+    const names: string[] = []
+    if ('name' in field && field.name) names.push(field.name)
+    if ('fields' in field && Array.isArray(field.fields)) names.push(...collectNames(field.fields))
+    return names
+  })
+
+describe('createMenuItemFields field organisation', () => {
+  test('exposes simple-by-default fields with Options/Advanced collapsibles', () => {
+    const fields = createMenuItemFields()
+
+    expect(findByName(fields, 'itemType')).toBeDefined()
+    expect(findByName(fields, 'type')).toBeDefined()
+
+    const allNames = collectNames(fields)
+    expect(allNames).toContain('label')
+    expect(allNames).toContain('url')
+    expect(allNames).toContain('reference')
+
+    const options = findCollapsible(fields, 'Options')
+    const advanced = findCollapsible(fields, 'Advanced')
+    expect(options).toBeDefined()
+    expect(advanced).toBeDefined()
+    expect(options.admin.initCollapsed).toBe(true)
+    expect(advanced.admin.initCollapsed).toBe(true)
+
+    expect(collectNames(options.fields)).toEqual(expect.arrayContaining(['target', 'displaySurface']))
+    expect(collectNames(advanced.fields)).toEqual(
+      expect.arrayContaining(['visibility', 'rel', 'roles', 'attrs']),
+    )
+  })
+
+  test('removes the advancedOptions radio entirely', () => {
+    const fields = createMenuItemFields()
+    expect(collectNames(fields)).not.toContain('advancedOptions')
+  })
+
+  test('mega item config exposes megaLayout, defaultFeatured and megaEntries', () => {
+    const fields = createMenuItemFields()
+
+    const megaLayout = findByName(fields, 'megaLayout')
+    const defaultFeatured = findByName(fields, 'defaultFeatured')
+    const megaEntries = findByName(fields, 'megaEntries')
+
+    expect(megaLayout).toBeDefined()
+    expect(megaLayout.defaultValue).toBe('reveal')
+    expect(defaultFeatured).toBeDefined()
+    expect(collectNames(defaultFeatured.fields)).toEqual(expect.arrayContaining(['heading', 'ctaLabel']))
+
+    expect(megaEntries).toBeDefined()
+    expect(megaEntries.dbName).toBe('me0')
+
+    const entryNames = megaEntries.fields.map((f: any) => f.name).filter(Boolean)
+    expect(entryNames).toEqual(expect.arrayContaining(['source', 'children', 'dynamicSource', 'parent', 'featured']))
+
+    const children = findByName(megaEntries.fields, 'children')
+    expect(children.dbName).toBe('mc0')
+
+    const featured = findByName(megaEntries.fields, 'featured')
+    expect(findByName(featured.fields, 'mode').defaultValue).toBe('inherit')
+  })
+
+  test('single source hides dynamicSource select and collapses parent.relationTo to a string', () => {
+    const source: DynamicSource = {
+      name: 'a',
+      collection: 'locations',
+      hrefBuilder: () => '/x',
+      label: 'A',
+      labelField: 'title',
+      parentCollection: 'destinations',
+      parentField: 'destination',
+    }
+    const fields = createMenuItemFields({ dynamicSources: [source] })
+    const megaEntries = findByName(fields, 'megaEntries')
+    const parent = findByName(megaEntries.fields, 'parent')
+    const dynamicSource = findByName(megaEntries.fields, 'dynamicSource')
+
+    expect(parent.relationTo).toBe('destinations')
+    expect(dynamicSource.admin.hidden).toBe(true)
+    expect(dynamicSource.defaultValue).toBe('a')
+  })
+
+  test('multiple sources show dynamicSource select and union parent.relationTo', () => {
+    const sources: DynamicSource[] = [
+      {
+        name: 'a',
+        collection: 'locations',
+        hrefBuilder: () => '/x',
+        label: 'A',
+        labelField: 'title',
+        parentCollection: 'destinations',
+        parentField: 'destination',
+      },
+      {
+        name: 'b',
+        collection: 'posts',
+        hrefBuilder: () => '/y',
+        label: 'B',
+        labelField: 'title',
+        parentCollection: 'pages',
+        parentField: 'page',
+      },
+    ]
+    const fields = createMenuItemFields({ dynamicSources: sources })
+    const megaEntries = findByName(fields, 'megaEntries')
+    const parent = findByName(megaEntries.fields, 'parent')
+    const dynamicSource = findByName(megaEntries.fields, 'dynamicSource')
+
+    expect(parent.relationTo).toEqual(['destinations', 'pages'])
+    expect(dynamicSource.admin.hidden).toBe(false)
+    expect(dynamicSource.options).toHaveLength(2)
+  })
+})
+
+describe('createResolveDynamicMenuHook (unit)', () => {
+  const source: DynamicSource = {
+    name: 'a',
+    collection: 'locations',
+    hrefBuilder: (doc) => `/loc/${(doc as any).slug}`,
+    label: 'A',
+    labelField: 'title',
+    parentCollection: 'destinations',
+    parentField: 'destination',
+    sort: 'title',
+  }
+  const sourceB: DynamicSource = { ...source, name: 'b' }
+
+  const makePayload = (docs: any[] = []) => ({
+    find: vi.fn().mockResolvedValue({ docs }),
+    findByID: vi.fn(),
+    logger: { error: vi.fn(), warn: vi.fn() },
+  })
+
+  test('resolves dynamic children and respects locale + where filter', async () => {
+    const payload = makePayload([{ id: '1', slug: 'paris', title: 'Paris' }])
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [source, sourceB] })
+    const doc: any = {
+      items: [
+        {
+          itemType: 'mega',
+          megaEntries: [{ dynamicSource: 'a', featured: { mode: 'inherit' }, parent: 'p1', source: 'dynamic' }],
+        },
+      ],
+    }
+
+    await hook({ doc, req: { locale: 'fr', payload } } as any)
+
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'locations',
+        locale: 'fr',
+        sort: 'title',
+        where: { destination: { equals: 'p1' } },
+      }),
+    )
+    const children = doc.items[0].megaEntries[0].children
+    expect(children).toHaveLength(1)
+    expect(children[0]).toMatchObject({ label: 'Paris', url: '/loc/paris' })
+  })
+
+  test('manual entries pass through unchanged', async () => {
+    const payload = makePayload()
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [source] })
+    const manualChildren = [{ label: 'Hand-typed', type: 'custom', url: '/manual' }]
+    const doc: any = {
+      items: [{ itemType: 'mega', megaEntries: [{ children: manualChildren, source: 'manual' }] }],
+    }
+
+    await hook({ doc, req: { payload } } as any)
+
+    expect(payload.find).not.toHaveBeenCalled()
+    expect(doc.items[0].megaEntries[0].children).toBe(manualChildren)
+  })
+
+  test('unknown source degrades to empty children and warns', async () => {
+    const payload = makePayload([{ id: '1', slug: 'x', title: 'X' }])
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [source, sourceB] })
+    const doc: any = {
+      items: [
+        {
+          itemType: 'mega',
+          megaEntries: [{ dynamicSource: 'nope', parent: 'p1', source: 'dynamic' }],
+        },
+      ],
+    }
+
+    await hook({ doc, req: { payload } } as any)
+
+    expect(payload.find).not.toHaveBeenCalled()
+    expect(doc.items[0].megaEntries[0].children).toEqual([])
+    expect(payload.logger.warn).toHaveBeenCalled()
+  })
+
+  test('missing parent degrades to empty children', async () => {
+    const payload = makePayload([{ id: '1', slug: 'x', title: 'X' }])
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [source] })
+    const doc: any = {
+      items: [{ itemType: 'mega', megaEntries: [{ source: 'dynamic' }] }],
+    }
+
+    await hook({ doc, req: { payload } } as any)
+
+    expect(payload.find).not.toHaveBeenCalled()
+    expect(doc.items[0].megaEntries[0].children).toEqual([])
+  })
+
+  test('dynamic featured resolves from the parent doc and degrades when fields absent', async () => {
+    const featuredSource: DynamicSource = {
+      ...source,
+      featured: { descriptionField: 'summary', headingField: 'title', imageField: 'image' },
+    }
+    const payload = {
+      find: vi.fn().mockResolvedValue({ docs: [{ id: 'c1', slug: 'paris', title: 'Paris' }] }),
+      findByID: vi.fn().mockResolvedValue({ id: 'p1', summary: 'City of light', title: 'France' }),
+      logger: { error: vi.fn(), warn: vi.fn() },
+    }
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [featuredSource] })
+    const doc: any = {
+      items: [
+        {
+          itemType: 'mega',
+          megaEntries: [{ featured: { mode: 'dynamic' }, parent: 'p1', source: 'dynamic' }],
+        },
+      ],
+    }
+
+    await hook({ doc, req: { payload } } as any)
+
+    const entry = doc.items[0].megaEntries[0]
+    expect(entry.featured).toMatchObject({ description: 'City of light', heading: 'France', mode: 'dynamic' })
+    expect(entry.featured.image).toBeUndefined()
+  })
+
+  test('does nothing when no dynamic sources are configured', async () => {
+    const payload = makePayload([{ id: '1' }])
+    const hook = createResolveDynamicMenuHook({ dynamicSources: [] })
+    const doc: any = {
+      items: [{ itemType: 'mega', megaEntries: [{ parent: 'p1', source: 'dynamic' }] }],
+    }
+
+    await hook({ doc, req: { payload } } as any)
+    expect(payload.find).not.toHaveBeenCalled()
+    expect(doc.items[0].megaEntries[0].children).toBeUndefined()
+  })
+})
+
+describe('Dynamic mega entries (integration via payload.find)', () => {
+  test('resolves children from a seeded parent/child set through afterRead', async () => {
+    const destination = await payload.create({
+      collection: 'destinations',
+      data: { slug: 'europe', summary: 'Old world', title: 'Europe' },
+    })
+
+    await payload.create({
+      collection: 'locations',
+      data: { slug: 'rome', destination: destination.id, title: 'Rome' },
+    })
+    await payload.create({
+      collection: 'locations',
+      data: { slug: 'berlin', destination: destination.id, title: 'Berlin' },
+    })
+
+    await payload.create({
+      collection: 'menus',
+      data: {
+        title: 'Dynamic Menu',
+        slug: 'dynamic-menu',
+        items: [
+          {
+            itemType: 'mega',
+            label: 'Explore',
+            megaEntries: [
+              {
+                label: 'Destinations',
+                type: 'internal',
+                url: '/destinations',
+                featured: { mode: 'dynamic' },
+                parent: destination.id,
+                source: 'dynamic',
+              },
+              {
+                label: 'Manual Entry',
+                type: 'custom',
+                url: '/manual',
+                children: [{ label: 'Static Child', type: 'custom', url: '/static' }],
+                source: 'manual',
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const result = await payload.find({
+      collection: 'menus',
+      depth: 1,
+      where: { slug: { equals: 'dynamic-menu' } },
+    })
+
+    const entries = (result.docs[0].items as any[])[0].megaEntries
+    const dynamicEntry = entries[0]
+    const manualEntry = entries[1]
+
+    // Children sorted by title -> Berlin before Rome
+    expect(dynamicEntry.children.map((c: any) => c.label)).toEqual(['Berlin', 'Rome'])
+    expect(dynamicEntry.children[0].url).toBe('/locations/berlin')
+    expect(dynamicEntry.featured).toMatchObject({ heading: 'Europe', mode: 'dynamic' })
+
+    expect(manualEntry.children).toHaveLength(1)
+    expect(manualEntry.children[0].label).toBe('Static Child')
+  })
+
+  test('dynamic entry without a parent resolves to empty children', async () => {
+    await payload.create({
+      collection: 'menus',
+      data: {
+        title: 'Orphan Dynamic Menu',
+        slug: 'orphan-dynamic-menu',
+        items: [
+          {
+            itemType: 'mega',
+            label: 'Explore',
+            megaEntries: [{ label: 'No Parent', type: 'custom', url: '/x', source: 'dynamic' }],
+          },
+        ],
+      },
+    })
+
+    const result = await payload.find({
+      collection: 'menus',
+      where: { slug: { equals: 'orphan-dynamic-menu' } },
+    })
+
+    const entries = (result.docs[0].items as any[])[0].megaEntries
+    expect(entries[0].children).toEqual([])
+  })
+})
+
+describe('megaColumns -> megaEntries migration', () => {
+  const buildLegacyMega = ({ withSecondColumn = false } = {}) => ({
+    itemType: 'mega',
+    label: 'Explore',
+    megaColumns: [
+      {
+        columnTitle: 'Primary',
+        columnLinks: [
+          {
+            label: 'Guides',
+            type: 'internal',
+            url: '/guides',
+            advancedOptions: 'default',
+            subLinks: [{ label: 'Getting Started', type: 'internal', url: '/guides/start' }],
+          },
+        ],
+        featured: { heading: 'Featured', description: 'Hello' },
+      },
+      ...(withSecondColumn
+        ? [
+            {
+              columnTitle: 'Secondary',
+              columnLinks: [{ label: 'Extra', type: 'custom', url: '/extra' }],
+              featured: { heading: 'Dropped' },
+            },
+          ]
+        : []),
+    ],
+  })
+
+  test('migrates a single-column mega item with featured', () => {
+    const { changed, items } = migrateMenuItemsMegaColumns([buildLegacyMega()])
+    expect(changed).toBe(true)
+
+    const migrated = items as any[]
+    expect(migrated[0].megaColumns).toBeUndefined()
+    expect(migrated[0].megaLayout).toBe('reveal')
+    expect(migrated[0].defaultFeatured).toMatchObject({ heading: 'Featured' })
+
+    const entries = migrated[0].megaEntries
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ label: 'Guides', source: 'manual' })
+    expect(entries[0].featured).toEqual({ mode: 'inherit' })
+    expect(entries[0].children).toHaveLength(1)
+    expect(entries[0].children[0].label).toBe('Getting Started')
+  })
+
+  test('appends additional columns as entries and keeps only primary featured', () => {
+    const { items } = migrateMenuItemsMegaColumns([buildLegacyMega({ withSecondColumn: true })])
+    const migrated = items as any[]
+    const entries = migrated[0].megaEntries
+
+    expect(entries.map((e: any) => e.label)).toEqual(['Guides', 'Extra'])
+    expect(migrated[0].defaultFeatured).toMatchObject({ heading: 'Featured' })
+  })
+
+  test('is idempotent when re-run against migrated data', () => {
+    const first = migrateMenuItemsMegaColumns([buildLegacyMega()])
+    const second = migrateMenuItemsMegaColumns(first.items)
+    expect(second.changed).toBe(false)
+    expect(second.items).toEqual(first.items)
+  })
+
+  test('detects whether a doc needs migration', () => {
+    expect(menuDocNeedsMegaColumnsMigration([buildLegacyMega()])).toBe(true)
+    const { items } = migrateMenuItemsMegaColumns([buildLegacyMega()])
+    expect(menuDocNeedsMegaColumnsMigration(items)).toBe(false)
+  })
+
+  test('migrates mega items nested inside dropdowns', () => {
+    const { changed, items } = migrateMenuItemsMegaColumns([
+      { itemType: 'dropdown', label: 'Parent', children: [buildLegacyMega()] },
+    ])
+    expect(changed).toBe(true)
+    const child = (items as any[])[0].children[0]
+    expect(child.megaEntries).toHaveLength(1)
+    expect(child.megaColumns).toBeUndefined()
   })
 })

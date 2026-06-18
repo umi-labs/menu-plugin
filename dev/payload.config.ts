@@ -51,6 +51,23 @@ const buildConfigWithMemoryDB = async () => {
           staticDir: path.resolve(dirname, 'media'),
         },
       },
+      {
+        slug: 'destinations',
+        fields: [
+          { name: 'title', type: 'text' },
+          { name: 'slug', type: 'text' },
+          { name: 'summary', type: 'textarea' },
+          { name: 'image', type: 'upload', relationTo: 'media' },
+        ],
+      },
+      {
+        slug: 'locations',
+        fields: [
+          { name: 'title', type: 'text' },
+          { name: 'slug', type: 'text' },
+          { name: 'destination', type: 'relationship', relationTo: 'destinations' },
+        ],
+      },
     ],
     db: mongooseAdapter({
       ensureIndexes: true,
@@ -64,6 +81,24 @@ const buildConfigWithMemoryDB = async () => {
     plugins: [
       menuPlugin({
         baseUrl: process.env.PRODUCTION_URL || '',
+        dynamicSources: [
+          {
+            name: 'destinations',
+            collection: 'locations',
+            featured: {
+              descriptionField: 'summary',
+              headingField: 'title',
+              imageField: 'image',
+            },
+            hrefBuilder: (doc) => `/locations/${(doc as { slug?: string }).slug ?? ''}`,
+            label: 'Destinations',
+            labelField: 'title',
+            parentCollection: 'destinations',
+            parentField: 'destination',
+            sort: 'title',
+          },
+        ],
+        mediaCollection: 'media',
         relationTo: ['pages', 'posts'],
       }),
     ],
