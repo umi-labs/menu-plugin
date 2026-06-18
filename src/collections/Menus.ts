@@ -2,11 +2,13 @@ import type { CollectionConfig } from 'payload'
 
 import { menuCache } from '../cache.js'
 import { createMenuItemFields, type MenuItemFieldOptions } from '../fields/MenuItem.js'
+import { createResolveDynamicMenuHook } from '../hooks/resolveDynamicMenu.js'
 import { buildMenuIdentityKey, normalizeMenuLocale } from '../utilities/menuIdentity.js'
 
-export type MenusCollectionOptions = MenuItemFieldOptions & {
+export type MenusCollectionOptions = {
+  childrenDepth?: number
   disabled?: boolean
-}
+} & MenuItemFieldOptions
 
 export const createMenusCollection = (options?: MenusCollectionOptions): CollectionConfig => ({
   slug: 'menus',
@@ -93,7 +95,7 @@ export const createMenusCollection = (options?: MenusCollectionOptions): Collect
   hooks: {
     beforeValidate: [
       ({ data }) => {
-        if (!data) return data
+        if (!data) {return data}
 
         const normalizedLocale = normalizeMenuLocale(data.locale)
 
@@ -125,6 +127,12 @@ export const createMenusCollection = (options?: MenusCollectionOptions): Collect
               }
               return doc
             },
+          ],
+          afterRead: [
+            createResolveDynamicMenuHook({
+              childrenDepth: options?.childrenDepth,
+              dynamicSources: options?.dynamicSources,
+            }),
           ],
         }),
   },

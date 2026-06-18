@@ -1,15 +1,24 @@
 import type { CollectionSlug, Config } from 'payload'
 
+import type { DynamicSource } from './types.js'
+
 import { menuCache } from './cache.js'
 import { createMenusCollection } from './collections/Menus.js'
 import { createExportMenusHandler } from './endpoints/exportMenusHandler.js'
 import { createGetMenuHandler } from './endpoints/getMenuHandler.js'
 import { createImportMenusHandler } from './endpoints/importMenusHandler.js'
 
+export { migrateMegaColumnsToEntries } from './migrations/megaColumnsToEntries.js'
+export type { DynamicSource } from './types.js'
+
 export type MenuPluginConfig = {
   baseUrl?: string
   cacheTTL?: number
+  /** depth used when resolving dynamic mega entry children (default: 1) */
+  childrenDepth?: number
   disabled?: boolean
+  /** sources used to auto-populate dynamic mega entries from related collections */
+  dynamicSources?: DynamicSource[]
   enableImportExport?: boolean
   maxDepth?: number
   mediaCollection?: CollectionSlug
@@ -30,7 +39,9 @@ export const menuPlugin =
       ...(config.collections || []),
       createMenusCollection({
         baseUrl: pluginOptions.baseUrl,
+        childrenDepth: pluginOptions.childrenDepth,
         disabled: pluginOptions.disabled,
+        dynamicSources: pluginOptions.dynamicSources,
         maxDepth: pluginOptions.maxDepth,
         mediaCollection: pluginOptions.mediaCollection,
         relationTo: pluginOptions.relationTo,
