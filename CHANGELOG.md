@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.5.0](https://github.com/umi-labs/menu-plugin/compare/v0.4.2...v0.5.0) (2026-06-18)
+
+
+### Features
+
+* dynamic mega menu entries ([10c8b60](https://github.com/umi-labs/menu-plugin/commit/10c8b601851e3bf49f1178d4e0c43cf2ace9da2a))
+
 ## [0.4.2](https://github.com/umi-labs/menu-plugin/compare/v0.4.1...v0.4.2) (2026-04-23)
 
 
