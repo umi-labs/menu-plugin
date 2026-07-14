@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { menuCache } from '../cache.js'
 import { createMenuItemFields, type MenuItemFieldOptions } from '../fields/MenuItem.js'
 import { createResolveDynamicMenuHook } from '../hooks/resolveDynamicMenu.js'
+import { stripDynamicMenuChildrenHook } from '../hooks/stripDynamicMenuChildren.js'
 import { buildMenuIdentityKey, normalizeMenuLocale } from '../utilities/menuIdentity.js'
 
 export type MenusCollectionOptions = {
@@ -109,6 +110,9 @@ export const createMenusCollection = (options?: MenusCollectionOptions): Collect
     ...(options?.disabled
       ? {}
       : {
+          // Pairs with the afterRead resolver: drop the resolved dynamic-entry
+          // data (whose children carry foreign ids) before it is persisted.
+          beforeChange: [stripDynamicMenuChildrenHook],
           afterChange: [
             ({ doc, previousDoc }) => {
               if (previousDoc?.slug) {
