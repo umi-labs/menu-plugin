@@ -156,7 +156,8 @@ const buildLeafLinkFields = (options?: MenuItemFieldOptions): Field[] => {
       name: 'type',
       type: 'select',
       admin: {
-        description: 'Select the type of link for this menu item.',
+        description:
+          'Select the type of link for this menu item. On a mega menu or dropdown this is where the top-level label links to, and is optional.',
       },
       defaultValue: 'reference',
       options: LINK_TYPE_OPTIONS,
@@ -273,39 +274,6 @@ const buildLeafLinkFields = (options?: MenuItemFieldOptions): Field[] => {
   ]
 }
 
-const isLink = (_data: any, siblingData: any) =>
-  siblingData?.itemType !== 'dropdown' && siblingData?.itemType !== 'mega'
-
-/**
- * Recursively gate a leaf link field so it only renders when the item behaves
- * like a link (i.e. `itemType` is not `dropdown`/`mega`). `label` always shows
- * (a dropdown/mega still needs a label) and `displaySurface` is always visible
- * regardless of `itemType`. Where there is no `itemType` sibling (e.g. mega
- * entries / children) `isLink` resolves to `true`, so gating is a no-op.
- */
-const gateLinkField = (field: Field): Field => {
-  if ('fields' in field && (field.type === 'row' || field.type === 'collapsible')) {
-    return { ...field, fields: field.fields.map(gateLinkField) } as Field
-  }
-
-  if ('name' in field) {
-    if (field.name === 'label' || field.name === 'displaySurface') {return field}
-    const existingCondition = (field as any).admin?.condition
-    return {
-      ...field,
-      admin: {
-        ...(field as any).admin,
-        condition: (_data: any, siblingData: any, extra: any) => {
-          if (!isLink(_data, siblingData)) {return false}
-          return existingCondition ? existingCondition(_data, siblingData, extra) : true
-        },
-      },
-    } as Field
-  }
-
-  return field
-}
-
 const buildMegaConfigFields = (options?: MenuItemFieldOptions, currentDepth = 0): Field[] => {
   const dynamicSources = options?.dynamicSources ?? []
   const relationTo = options?.relationTo ?? ('pages' as CollectionSlug)
@@ -374,7 +342,7 @@ const buildMegaConfigFields = (options?: MenuItemFieldOptions, currentDepth = 0)
       // limit even when consumers raise `maxDepth`.
       dbName: `me${currentDepth}`,
       fields: [
-        ...buildLeafLinkFields(options).map(gateLinkField),
+        ...buildLeafLinkFields(options),
         {
           name: 'source',
           type: 'select',
@@ -403,7 +371,7 @@ const buildMegaConfigFields = (options?: MenuItemFieldOptions, currentDepth = 0)
                 }),
           },
           dbName: `mc${currentDepth}`,
-          fields: buildLeafLinkFields(options).map(gateLinkField),
+          fields: buildLeafLinkFields(options),
           label: 'Children',
         },
         {
@@ -471,7 +439,7 @@ const buildMegaConfigFields = (options?: MenuItemFieldOptions, currentDepth = 0)
 
 export const createMenuItemFields = (options?: MenuItemFieldOptions, currentDepth = 0): Field[] => {
   const maxDepth = options?.maxDepth ?? 1
-  const leafLinkFields = buildLeafLinkFields(options).map(gateLinkField)
+  const leafLinkFields = buildLeafLinkFields(options)
 
   const canNest = currentDepth < maxDepth
 
