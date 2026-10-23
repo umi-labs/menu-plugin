@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.6.0](https://github.com/umi-labs/menu-plugin/compare/v0.5.0...v0.6.0) (2026-10-23)
+
+
+### Features
+
+* let mega and dropdown items carry an optional landing link ([8f0d3f2](https://github.com/umi-labs/menu-plugin/commit/8f0d3f26f370ac5971dd708919861e5e22a6a9a5))
+
 # [0.5.0](https://github.com/umi-labs/menu-plugin/compare/v0.4.2...v0.5.0) (2026-06-18)
 
 
